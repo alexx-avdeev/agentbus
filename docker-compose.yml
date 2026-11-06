@@ -1,0 +1,25 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: agentbus-rabbitmq
+    hostname: agentbus
+    # Host networking: 5672 (AMQP) and 15672 (management UI) are exposed directly,
+    # which is what agents on other machines need. It also sidesteps the Docker
+    # address-pool exhaustion on this host (bip == default pool in daemon.json).
+    network_mode: host
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      # guest is only allowed from localhost by default; remote agents need a real user.
+      # Create one with: docker exec agentbus-rabbitmq rabbitmqctl add_user agent <pass>
+      #                  docker exec agentbus-rabbitmq rabbitmqctl set_permissions agent '.*' '.*' '.*'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  rabbitmq-data:
